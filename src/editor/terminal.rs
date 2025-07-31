@@ -6,16 +6,16 @@ use std::io::{stdout, Error, Write};
 
 pub struct Terminal;
 
-#[derive(Clone, Copy)]
+#[derive(Default, Clone, Copy)]
 pub struct Size {
-    pub height: u16,
-    pub width: u16,
+    pub height: usize,
+    pub width: usize,
 }
 
 #[derive(Clone, Copy, Default)]
 pub struct Position {
-    pub column: u16,
-    pub row: u16,
+    pub column: usize,
+    pub row: usize,
 }
 
 impl Terminal {
@@ -44,12 +44,14 @@ impl Terminal {
     }
 
     pub fn move_caret_to(position: Position) -> Result<(), Error> {
-        Self::queue_command(MoveTo(position.column, position.row))?;
+        Self::queue_command(MoveTo(position.column as u16, position.row as u16))?;
         Ok(())
     }
 
     pub fn size() -> Result<Size, Error> {
-        let (width, height) = size()?;
+        let (width_16, height_16) = size()?;
+        let height = height_16 as usize;
+        let width = width_16 as usize;
         Ok(Size { height, width })
     }
 

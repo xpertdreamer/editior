@@ -1,10 +1,9 @@
 use core::cmp::min;
-use crossterm::event::{
-    read,
-    Event::{self, Key},
-    KeyCode, KeyEvent, KeyEventKind, KeyModifiers,
+use crossterm::event::{read, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use std::{
+    env::{self},
+    io::Error,
 };
-use std::io::Error;
 
 mod view;
 use view::View;
@@ -13,22 +12,31 @@ use terminal::{Position, Size, Terminal};
 
 #[derive(Default, Clone, Copy)]
 struct Location {
-    x: u16,
-    y: u16,
+    x: usize,
+    y: usize,
 }
 
 #[derive(Default)]
 pub struct Editor {
     flag_quit: bool,
     location: Location,
+    view: View,
 }
 
 impl Editor {
     pub fn run(&mut self) {
         Terminal::initialize().unwrap();
+        self.handle_args();
         let result = self.repl();
         Terminal::terminate().unwrap();
         result.unwrap();
+    }
+
+    fn handle_args(&mut self) {
+        let args: Vec<String> = env::args().collect();
+        if let Some(file_name) = args.get(1) {
+            self.view.load(file_name);
+        }
     }
 
     fn repl(&mut self) -> Result<(), Error> {
@@ -116,9 +124,35 @@ impl Editor {
         Ok(())
     }
 
+    // fn evaluate_event(&mut self, event: &Event) -> Result<(), Error> {
+    //     if let Key(key_event) = event {
+    //         match key_event {
+    //             KeyEvent {
+    //                 code: KeyCode::Char('q'),
+    //                 modifiers: KeyModifiers::CONTROL,
+    //                 kind: KeyEventKind::Press,
+    //                 ..
+    //             } => {
+    //                 self.flag_quit = true;
+    //             }
+    //             _ => self.move_point(key_event)?,
+    //             Event::Resize(width_u16, height_u16) => {
+    //                 #[allow(clippy::as_conversions)]
+    //                 let height = height_u16 as usize;
+    //                 #[allow(clippy::as_conversions)]
+    //                 let width = width_u16 as usize;
+    //                 self.view.resize(Size { height, width });
+    //             }
+    //         }
+    //     }
+    //
+    //     Ok(())
+    // }
+    //
+
     fn evaluate_event(&mut self, event: &Event) -> Result<(), Error> {
-        if let Key(key_event) = event {
-            match key_event {
+        match event {
+            Event::Key(key_event) => match key_event {
                 KeyEvent {
                     code: KeyCode::Char('q'),
                     modifiers: KeyModifiers::CONTROL,
@@ -127,21 +161,28 @@ impl Editor {
                 } => {
                     self.flag_quit = true;
                 }
-                _ => self.move_point(key_event)?,
+                _ => {
+                    self.move_point(key_event)?;
+                }
+            },
+            Event::Resize(width_u16, height_u16) => {
+                let height = *height_u16 as usize;
+                let width = *width_u16 as usize;
+                self.view.resize(Size { height, width });
             }
+            _ => {} //
         }
-
         Ok(())
     }
 
-    fn refresh_screen(&self) -> Result<(), Error> {
+    fn refresh_screen(&mut self) -> Result<(), Error> {
         Terminal::hide_caret()?;
         Terminal::move_caret_to(Position::default())?;
         if self.flag_quit {
             Terminal::clear_screen()?;
             Terminal::print("Goodbye!\r\n")?;
         } else {
-            View::render()?;
+            self.view.render()?;
             Terminal::move_caret_to(Position {
                 column: self.location.x,
                 row: self.location.y,
@@ -152,4 +193,3 @@ impl Editor {
         Ok(())
     }
 }
-
