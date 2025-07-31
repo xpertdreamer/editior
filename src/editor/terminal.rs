@@ -1,8 +1,7 @@
-use crossterm::cursor::{MoveTo, Hide, Show};
-use crossterm::{queue, Command};
-use core::fmt::Display;
+use crossterm::cursor::{Hide, MoveTo, Show};
 use crossterm::style::Print;
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode, size, Clear, ClearType};
+use crossterm::{queue, Command};
 use std::io::{stdout, Error, Write};
 
 pub struct Terminal;
@@ -47,7 +46,7 @@ impl Terminal {
     pub fn move_caret_to(position: Position) -> Result<(), Error> {
         Self::queue_command(MoveTo(position.column, position.row))?;
         Ok(())
-    }    
+    }
 
     pub fn size() -> Result<Size, Error> {
         let (width, height) = size()?;
@@ -64,7 +63,7 @@ impl Terminal {
         Ok(())
     }
 
-    pub fn print(string: impl Display) -> Result<(), Error> {
+    pub fn print(string: &str) -> Result<(), Error> {
         Self::queue_command(Print(string))?;
         Ok(())
     }
@@ -74,7 +73,7 @@ impl Terminal {
         Ok(())
     }
 
-    fn queue_command<T:Command>(command: T) -> Result<(), Error> {
+    fn queue_command<T: Command>(command: T) -> Result<(), Error> {
         queue!(stdout(), command)?;
         Ok(())
     }
